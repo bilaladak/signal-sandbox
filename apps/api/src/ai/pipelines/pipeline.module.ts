@@ -7,10 +7,21 @@ import { LlmModule } from '../../modules/llm/llm.module';
 import { ClassificationPipeline } from './classification.pipeline';
 import { EventExtractionPipeline } from './event-extraction.pipeline';
 import { EntityLinkingPipeline } from './entity-linking.pipeline';
+import { DuplicateDetectionService } from './duplicate-detection.service';
 
 @Module({
   imports: [LlmModule],
-  providers: [ClassificationPipeline, EventExtractionPipeline, EntityLinkingPipeline],
-  exports: [ClassificationPipeline, EventExtractionPipeline, EntityLinkingPipeline],
+  providers: [
+    ClassificationPipeline,
+    EventExtractionPipeline,
+    EntityLinkingPipeline,
+    DuplicateDetectionService,
+  ],
+  exports: [
+    ClassificationPipeline,
+    EventExtractionPipeline,
+    EntityLinkingPipeline,
+    DuplicateDetectionService,
+  ],
 })
 export class PipelineModule {}

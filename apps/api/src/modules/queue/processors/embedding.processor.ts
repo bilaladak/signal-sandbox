@@ -4,6 +4,7 @@ import { Job } from 'bullmq';
 import { Pool } from 'pg';
 import { DATABASE_POOL } from '../../../database/database.module';
 import { LlmService } from '../../llm/llm.service';
+import { DuplicateDetectionService } from '../../../ai/pipelines/duplicate-detection.service';
 
 interface EmbeddingJobData {
   eventId: string;
@@ -18,6 +19,7 @@ export class EmbeddingProcessor extends WorkerHost {
   constructor(
     @Inject(DATABASE_POOL) private readonly pool: Pool,
     private readonly llm: LlmService,
+    private readonly duplicateDetection: DuplicateDetectionService,
   ) {
     super();
   }
@@ -45,6 +47,23 @@ export class EmbeddingProcessor extends WorkerHost {
       this.logger.log(
         `Embedding generated and stored for event ${eventId} — ${embedding.length}d, cost: $${result.cost.toFixed(6)}, org: ${orgId}`,
       );
+
+      // Run duplicate detection after embedding is stored
+      const dupResult = await this.duplicateDetection.checkDuplicate(
+        eventId,
+        embedding,
+      );
+
+      if (dupResult.isDuplicate && dupResult.nearestEventId) {
+        this.logger.warn(
+          `Event ${eventId} flagged as near-duplicate of ${dupResult.nearestEventId} (similarity: ${dupResult.similarity?.toFixed(3)})`,
+        );
+        await this.duplicateDetection.markAsDuplicate(
+          eventId,
+          dupResult.nearestEventId,
+          dupResult.similarity!,
+        );
+      }
     } catch (error) {
       this.logger.error(
         `Failed to generate embedding for event ${eventId}: ${(error as Error).message}`,
